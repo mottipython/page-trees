@@ -438,7 +438,7 @@ static void draw_scene(SDL_Renderer *r, int w, int h)
     flush(r);
 
     double wind = sin(anim_t * 0.31) * 0.6 + sin(anim_t * 0.13 + 1) * 0.4;
-    double picking = ramp(p, P_PICK, P_PICKED) * NLEAF;                 /* how many leaves have been picked */
+    double picking = ramp(p, P_PICK, P_PICKED) * (NLEAF + 3);                /* how many leaves have been picked */
     int order_tree[NTREE] = {0, 2, 4, 1, 3};                           /* far trees first, near ones over them */
     for (int oi = 0; oi < NTREE; oi++) {
         int t = order_tree[oi];
