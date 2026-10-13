@@ -1,5 +1,5 @@
 # The Page Trees - a screensaver of the page trees from Neal Stephenson's "Anathem"
-VERSION  := 1.0.0
+VERSION  := 1.0.1
 PREFIX   ?= /usr
 SYSCONFDIR ?= /etc
 DESTDIR  ?=
@@ -22,7 +22,7 @@ build/page-trees: src/trees.c src/stb_image.h $(wildcard assets/art/*)
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(SDL_CFLAGS) -o $@ src/trees.c $(LDFLAGS) $(SDL_LIBS) -lm
 
 check: build/page-trees
-	SDL_VIDEODRIVER=dummy ./build/page-trees --snapshot build/check.bmp --time 160 --size 640x400 && echo "ran a full round"
+	SDL_VIDEODRIVER=dummy ./build/page-trees --snapshot build/check.bmp --time 200 --size 640x400 && echo "ran a full round"
 
 install: all
 	install -Dm755 build/page-trees $(DESTDIR)$(PREFIX)/bin/page-trees

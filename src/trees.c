@@ -247,12 +247,13 @@ static void text(const char *str, double cx, double y, double s, double weight, 
  *
  * A year takes YEAR seconds. It starts at the season it really is (taking the year
  * to begin with spring on the first of March, as in the north). */
-#define YEAR 150.0
+#define YEAR 190.0
 #define NTREE 5
 #define NL 34                 /* leaves on a tree */
 #define NLEAF (NTREE * NL)
 #define SLOTS 11              /* places on the line between one tree and the next */
 #define NFLAKE 110
+#define WALK 0.42            /* of the time he gives a tree, how much is the walk on to the next */
 typedef struct { double ax, ay, tilt, size, sway; int tree, order, slot; } Leaf;
 static Leaf leaf[NLEAF];
 static const double TX[NTREE] = {0.1, 0.29, 0.5, 0.71, 0.9};      /* where the trees stand, across */
@@ -268,7 +269,7 @@ static int opt_day = -1;      /* --date: begin at this day of the year instead o
 #define P_FULL 0.22
 #define P_TURN 0.40
 #define P_PICK 0.50
-#define P_PICKED 0.68
+#define P_PICKED 0.70
 #define P_DRY 0.80
 #define P_IN 0.84
 #define P_CUT 0.925
@@ -330,6 +331,18 @@ static void hang(int which, double x, double y, double tall, double deg, double 
     double w = tall * sprite[which].w / sprite[which].h;
     SDL_FRect dst = {(float)(x - w / 2), (float)y, (float)w, (float)tall};
     SDL_FPoint pivot = {(float)(w / 2), 0};
+    SDL_SetTextureAlphaMod(cur_tex[which], (Uint8)(fmin(alpha, 1) * 255));
+    SDL_RenderCopyExF(ren, cur_tex[which], NULL, &dst, deg, &pivot, SDL_FLIP_NONE);
+    SDL_SetTextureAlphaMod(cur_tex[which], 255);
+}
+/* the fraa, standing with his feet at (x, y), leaning `deg`, as faint as `alpha` */
+static void figure(int which, double x, double y, double tall, double deg, double alpha)
+{
+    flush(ren);
+    if (alpha <= 0.01 || !cur_tex || !cur_tex[which]) return;
+    double w = tall * sprite[which].w / sprite[which].h;
+    SDL_FRect dst = {(float)(x - w / 2), (float)(y - tall), (float)w, (float)tall};
+    SDL_FPoint pivot = {(float)(w / 2), (float)tall};
     SDL_SetTextureAlphaMod(cur_tex[which], (Uint8)(fmin(alpha, 1) * 255));
     SDL_RenderCopyExF(ren, cur_tex[which], NULL, &dst, deg, &pivot, SDL_FLIP_NONE);
     SDL_SetTextureAlphaMod(cur_tex[which], 255);
@@ -438,7 +451,9 @@ static void draw_scene(SDL_Renderer *r, int w, int h)
     flush(r);
 
     double wind = sin(anim_t * 0.31) * 0.6 + sin(anim_t * 0.13 + 1) * 0.4;
-    double picking = ramp(p, P_PICK, P_PICKED) * (NLEAF + 3);                /* how many leaves have been picked */
+    /* how many leaves have been picked: a tree's worth while he stands at it, none while he walks on */
+    double harvest = ramp(p, P_PICK, P_PICKED) * NTREE, picking;
+    { int t = (int)harvest; if (t >= NTREE) t = NTREE - 1; picking = (t + fmin((harvest - t) / (1 - WALK), 1)) * NL + (harvest >= NTREE ? 3 : 0); }
     int order_tree[NTREE] = {0, 2, 4, 1, 3};                           /* far trees first, near ones over them */
     for (int oi = 0; oi < NTREE; oi++) {
         int t = order_tree[oi];
@@ -475,16 +490,23 @@ static void draw_scene(SDL_Renderer *r, int w, int h)
         }
     }
     flush(r);
-    /* the fraa: admiring them in spring and summer, and picking in autumn */
-    if (p > P_BUD + 0.02 && p < P_PICK - 0.01) pic(SP_F_STAND, w * 0.4, h * 0.95, h * 0.25, 0.5, 1);
-    else if (p >= P_PICK - 0.01 && p < P_PICKED + 0.01) {
-        double f = ramp(p, P_PICK, P_PICKED) * NTREE;
-        int t = (int)f; if (t >= NTREE) t = NTREE - 1;
-        double part = f - t, x = TX[t] * w - h * 0.09, bob = fabs(sin(anim_t * 3)) * unit * 0.3, tall = h * 0.25;
-        if (part > 0.82 && t < NTREE - 1) {
-            x += (TX[t + 1] * w - TX[t] * w) * ease((part - 0.82) / 0.18);
-            pic(SP_F_CARRY, x, h * 0.96 - bob, tall, 0.5, 1);
-        } else pic(SP_F_REACH, x, h * 0.96 - (sin(anim_t * 2.2) > 0.6 ? unit * 0.6 : 0), tall, 0.5, 1);
+    /* The fraa: admiring the trees in spring and summer, and picking in autumn. He
+     * comes and goes, and changes from one thing to another, by fading, and every
+     * movement of his is a smooth one. */
+    {
+        double tall = h * 0.25, feet = h * 0.96;
+        double admiring = ease(ramp(p, P_BUD + 0.02, P_BUD + 0.035)) * (1 - ease(ramp(p, P_PICK - 0.03, P_PICK - 0.015)));
+        if (admiring > 0) figure(SP_F_STAND, w * 0.4, feet, tall, sin(anim_t * 0.5) * 1.2, admiring);
+        double here = ease(ramp(p, P_PICK - 0.012, P_PICK)) * (1 - ease(ramp(p, P_PICKED, P_PICKED + 0.012)));
+        if (here > 0) {
+            int t = (int)harvest; if (t >= NTREE) t = NTREE - 1;
+            double part = harvest - t, go = t < NTREE - 1 ? ramp(part, 1 - WALK, 1) : 0, x = (TX[t] + (t < NTREE - 1 ? (TX[t + 1] - TX[t]) * ease(go) : 0)) * w - h * 0.09;
+            double walking = ease(ramp(go, 0, 0.12)) * (1 - ease(ramp(go, 0.88, 1)));          /* how much he is the walker and not the picker */
+            double step = anim_t * 4.2, bob = (1 - cos(2 * step)) * 0.5 * unit * 0.22;           /* a gentle rise and fall, with no corners in it */
+            double stretch = (0.5 + 0.5 * sin(anim_t * 1.5)) * unit * 0.45;                      /* up on his toes and down again */
+            if (walking < 1) figure(SP_F_REACH, x, feet - stretch * (1 - walking), tall, 0, here * (1 - walking));
+            if (walking > 0) figure(SP_F_CARRY, x, feet - bob * walking, tall, sin(step) * 1.5 * walking, here * walking);
+        }
     }
     flush(r);
     if (winter > 0) for (int i = 0; i < NFLAKE; i++) /* snow */
