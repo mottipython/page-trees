@@ -1,5 +1,5 @@
 # The Page Trees - a screensaver of the page trees from Neal Stephenson's "Anathem"
-VERSION  := 1.0.1
+VERSION  := 1.1.0
 PREFIX   ?= /usr
 SYSCONFDIR ?= /etc
 DESTDIR  ?=

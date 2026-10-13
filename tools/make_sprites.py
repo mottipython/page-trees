@@ -8,7 +8,9 @@ objects.jpeg is a sheet on flat magenta: two bare trees on the top row, and on t
 bottom row a green leaf, two more leaves that are not used, a stone and the cutting
 frame. The golden leaf and the dried leaf are made from the green one by changing
 its colour, so that a leaf keeps exactly its shape as it turns and dries.
-fraa.jpeg, if it is there, is four drawings of the fraa in a 2 x 2 grid. grove.jpeg
+fraa.jpeg is four drawings of the fraa in a 2 x 2 grid, of which the last two are
+used; anim.jpeg is three frames of him walking with his basket, the basket, and
+four frames of him picking a leaf. grove.jpeg
 is the background. Needs ImageMagick and numpy.
 """
 import subprocess
@@ -75,21 +77,27 @@ def main():
     subprocess.run(["magick", f"{OUT}/leaf_g.png", "-modulate", "122,150,80", f"{OUT}/leaf_y.png"], check=True)
     subprocess.run(["magick", f"{OUT}/leaf_g.png", "-modulate", "122,50,84", "-fill", "#f2dba4", "-colorize", "52", f"{OUT}/leaf_d.png"], check=True)
     print("trees, leaves, stone, frame")
-    if os.path.exists(f"{SRC}/fraa.jpeg"):
-        got = [trim(p) for p in pieces(key(load(f"{SRC}/fraa.jpeg")), 2)]
-        if len(got) != 4:
-            raise SystemExit(f"fraa: found {len(got)} drawings, expected 4")
-        if os.path.exists(f"{SRC}/carry.jpeg"):  # him with his basket, drawn again on its own
-            tall = got[1].shape[0]
-            got[1] = trim(key(load(f"{SRC}/carry.jpeg")))
-            f1 = tall / got[1].shape[0]
-        else:
-            f1 = 1
-        f = 480 / max(p.shape[0] for i, p in enumerate(got) if i != 1)
-        for name, p in zip(["f_reach", "f_carry", "f_write", "f_stand"], got):
-            k = f * (f1 if name == "f_carry" else 1)
-            save(p, max(1, round(p.shape[1] * k)), max(1, round(p.shape[0] * k)), f"{OUT}/{name}.png")
-        print("fraa")
+    # the fraa: writing and standing from one sheet, and from the other three frames of
+    # walking with his basket, the basket, and four frames of picking a leaf. They are
+    # all brought to one scale by matching the height at which he stands.
+    got = [trim(p) for p in pieces(key(load(f"{SRC}/fraa.jpeg")), 2)]
+    if len(got) != 4:
+        raise SystemExit(f"fraa: found {len(got)} drawings, expected 4")
+    f = 480 / got[3].shape[0]
+    for name, p in [("f_write", got[2]), ("f_stand", got[3])]:
+        save(p, max(1, round(p.shape[1] * f)), max(1, round(p.shape[0] * f)), f"{OUT}/{name}.png")
+    anim = [trim(p) for p in pieces(key(load(f"{SRC}/anim.jpeg")), 2)]
+    if len(anim) != 8:
+        raise SystemExit(f"anim: found {len(anim)} drawings, expected 8")
+    k = 480 * 0.94 / anim[6].shape[0]  # in the seventh he stands flat, a little bowed over his leaf
+    for name, p in zip(["w1", "w2", "w3", "basket", "p1", "p2", "p3", "p4"], anim):
+        w, h = max(1, round(p.shape[1] * k)), max(1, round(p.shape[0] * k))
+        save(p, w, h, f"{OUT}/{name}.png")
+        solid = p[..., 3] > 128
+        feet = np.where(solid[int(p.shape[0] * 0.95):].any(axis=0))[0]
+        head = np.where(solid[:int(p.shape[0] * 0.2)].any(axis=0))[0]
+        print(f"{name} {w}x{h}  feet {feet.min() / p.shape[1]:.2f}-{feet.max() / p.shape[1]:.2f}  head {head.mean() / p.shape[1]:.2f}")
+    print("fraa")
     subprocess.run(["magick", f"{SRC}/grove.jpeg", "-resize", "1920x1080!", "-quality", "90", f"{OUT}/bg.jpg"], check=True)
     print("grove")
 

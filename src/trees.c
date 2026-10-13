@@ -62,12 +62,18 @@ ART(leaf_y, "leaf_y.png")
 ART(leaf_d, "leaf_d.png")
 ART(stone, "stone.png")
 ART(frame, "frame.png")
-ART(f_reach, "f_reach.png")
-ART(f_carry, "f_carry.png")
+ART(w1, "w1.png")
+ART(w2, "w2.png")
+ART(w3, "w3.png")
+ART(basket, "basket.png")
+ART(p1, "p1.png")
+ART(p2, "p2.png")
+ART(p3, "p3.png")
+ART(p4, "p4.png")
 ART(f_write, "f_write.png")
 ART(f_stand, "f_stand.png")
 
-enum { SP_BG, SP_BANNER, SP_TREE1, SP_TREE2, SP_LEAF_G, SP_LEAF_Y, SP_LEAF_D, SP_STONE, SP_FRAME, SP_F_REACH, SP_F_CARRY, SP_F_WRITE, SP_F_STAND, NSPRITE };
+enum { SP_BG, SP_BANNER, SP_TREE1, SP_TREE2, SP_LEAF_G, SP_LEAF_Y, SP_LEAF_D, SP_STONE, SP_FRAME, SP_W1, SP_W2, SP_W3, SP_BASKET, SP_P1, SP_P2, SP_P3, SP_P4, SP_F_WRITE, SP_F_STAND, NSPRITE };
 static struct { const unsigned char *file, *end; int w, h; unsigned char *px; } sprite[NSPRITE] = {
     {art_bg, art_bg_end},
     {art_banner, art_banner_end},
@@ -78,8 +84,14 @@ static struct { const unsigned char *file, *end; int w, h; unsigned char *px; } 
     {art_leaf_d, art_leaf_d_end},
     {art_stone, art_stone_end},
     {art_frame, art_frame_end},
-    {art_f_reach, art_f_reach_end},
-    {art_f_carry, art_f_carry_end},
+    {art_w1, art_w1_end},
+    {art_w2, art_w2_end},
+    {art_w3, art_w3_end},
+    {art_basket, art_basket_end},
+    {art_p1, art_p1_end},
+    {art_p2, art_p2_end},
+    {art_p3, art_p3_end},
+    {art_p4, art_p4_end},
     {art_f_write, art_f_write_end},
     {art_f_stand, art_f_stand_end},
 };
@@ -259,7 +271,7 @@ static void text(const char *str, double cx, double y, double s, double weight, 
 #define NLEAF (NTREE * NL)
 #define SLOTS 11              /* places on the line between one tree and the next */
 #define NFLAKE 110
-#define WALK 0.42            /* of the time he gives a tree, how much is the walk on to the next */
+#define WALK 0.40            /* of the time he gives a tree, how much is the walk on to the next */
 typedef struct { double ax, ay, tilt, size, sway; int tree, order, slot; } Leaf;
 static Leaf leaf[NLEAF];
 static const double TX[NTREE] = {0.1, 0.29, 0.5, 0.71, 0.9};      /* where the trees stand, across */
@@ -274,8 +286,8 @@ static int opt_day = -1;      /* --date: begin at this day of the year instead o
 #define P_BUD 0.03
 #define P_FULL 0.22
 #define P_TURN 0.40
-#define P_PICK 0.50
-#define P_PICKED 0.70
+#define P_PICK 0.48
+#define P_PICKED 0.72
 #define P_DRY 0.80
 #define P_IN 0.84
 #define P_CUT 0.925
@@ -351,6 +363,20 @@ static void figure(int which, double x, double y, double tall, double deg, doubl
     SDL_FPoint pivot = {(float)(w / 2), (float)tall};
     SDL_SetTextureAlphaMod(cur_tex[which], (Uint8)(fmin(alpha, 1) * 255));
     SDL_RenderCopyExF(ren, cur_tex[which], NULL, &dst, deg, &pivot, SDL_FLIP_NONE);
+    SDL_SetTextureAlphaMod(cur_tex[which], 255);
+}
+/* One frame of the fraa. All the frames are drawn to one scale (he stands 480 high
+ * in them), so `tall` is his standing height on the screen whatever he is doing.
+ * `anchor` is the part of the frame, across, that is to stay at x: his feet when he
+ * stands and picks, his head when he walks. */
+static void frame(int which, double x, double y, double tall, double anchor, double alpha)
+{
+    flush(ren);
+    if (alpha <= 0.01 || !cur_tex || !cur_tex[which]) return;
+    double k = tall / 480.0, w = sprite[which].w * k, hgt = sprite[which].h * k;
+    SDL_FRect dst = {(float)(x - w * anchor), (float)(y - hgt), (float)w, (float)hgt};
+    SDL_SetTextureAlphaMod(cur_tex[which], (Uint8)(fmin(alpha, 1) * 255));
+    SDL_RenderCopyF(ren, cur_tex[which], NULL, &dst);
     SDL_SetTextureAlphaMod(cur_tex[which], 255);
 }
 /* a leaf, part-way between two of its colours */
@@ -506,12 +532,30 @@ static void draw_scene(SDL_Renderer *r, int w, int h)
         double here = ease(ramp(p, P_PICK - 0.012, P_PICK)) * (1 - ease(ramp(p, P_PICKED, P_PICKED + 0.012)));
         if (here > 0) {
             int t = (int)harvest; if (t >= NTREE) t = NTREE - 1;
-            double part = harvest - t, go = t < NTREE - 1 ? ramp(part, 1 - WALK, 1) : 0, x = (TX[t] + (t < NTREE - 1 ? (TX[t + 1] - TX[t]) * ease(go) : 0)) * w - h * 0.09;
-            double walking = ease(ramp(go, 0, 0.12)) * (1 - ease(ramp(go, 0.88, 1)));          /* how much he is the walker and not the picker */
-            double step = anim_t * 4.2, bob = (1 - cos(2 * step)) * 0.5 * unit * 0.22;           /* a gentle rise and fall, with no corners in it */
-            double stretch = (0.5 + 0.5 * sin(anim_t * 1.5)) * unit * 0.45;                      /* up on his toes and down again */
-            if (walking < 1) figure(SP_F_REACH, x, feet - stretch * (1 - walking), tall, 0, here * (1 - walking));
-            if (walking > 0) figure(SP_F_CARRY, x, feet - bob * walking, tall, sin(step) * 1.5 * walking, here * walking);
+            double part = harvest - t, go = t < NTREE - 1 ? ramp(part, 1 - WALK, 1) : 0, x = (TX[t] + (t < NTREE - 1 ? (TX[t + 1] - TX[t]) * ease(go) : 0)) * w - h * 0.1;
+            double walking = ramp(go, 0, 0.04) * (1 - ramp(go, 0.96, 1));   /* how much he is the walker and not the picker */
+            if (walking < 1) {
+                /* Picking: reach, take hold, bring it down, lay it in the basket at his
+                 * feet, and up again. One frame melts quickly into the next. */
+                static const int PICK[4] = {SP_P1, SP_P2, SP_P3, SP_P4};
+                static const double FEET[4] = {0.455, 0.45, 0.425, 0.245}, HOLD[4] = {0.3, 0.22, 0.26, 0.22};
+                double cyc = fmod(anim_t / 1.9, 1.0), acc = 0, a = here * (1 - walking);
+                int f = 0;
+                while (f < 3 && cyc >= acc + HOLD[f]) acc += HOLD[f++];
+                double into = (cyc - acc) / HOLD[f], melt = ramp(into, 0.82, 1.0);
+                frame(PICK[f], x, feet, tall, FEET[f], a * (melt < 1 ? 1 : 0.999));
+                if (melt > 0) frame(PICK[(f + 1) % 4], x, feet, tall, FEET[(f + 1) % 4], a * melt);
+                frame(SP_BASKET, x + tall * 0.4, feet + tall * 0.02, tall * 0.62, 0.5, a);
+            }
+            if (walking > 0) {
+                /* Walking: heel, passing, the other heel, passing. He rises a little as one
+                 * leg passes the other. */
+                static const int STEP[4] = {SP_W1, SP_W2, SP_W3, SP_W2};
+                static const double HEAD[4] = {0.45, 0.28, 0.39, 0.28};
+                double stride = anim_t * 5.2;
+                int f = (int)stride % 4;
+                frame(STEP[f], x + tall * 0.1, feet - (f % 2 ? unit * 0.18 : 0), tall, HEAD[f], here * walking);
+            }
         }
     }
     flush(r);
