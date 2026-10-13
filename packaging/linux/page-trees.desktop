@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=The Page Trees
+Comment=A grove through the year, and the leaves that become pages
+Exec=page-trees --window
+Icon=page-trees
+Categories=Game;LogicGame;Education;Math;
+Keywords=Anathem;trees;seasons;serene;screensaver;

@@ -415,7 +415,7 @@ static void indoors(double p, int w, int h)
         }
         double tall = ph * 0.62;
         if (cur_tex && cur_tex[SP_F_WRITE]) SDL_SetTextureAlphaMod(cur_tex[SP_F_WRITE], (Uint8)(in * 255));
-        pic(SP_F_WRITE, x0 + pw * 0.75, base + ph * 0.06, tall, 0.5, 1);
+        pic(SP_F_WRITE, x0 + pw * 0.75, base + ph * 0.1, tall * 0.8, 0.5, 1);
         flush(ren);
         if (cur_tex && cur_tex[SP_F_WRITE]) SDL_SetTextureAlphaMod(cur_tex[SP_F_WRITE], 255);
     }
@@ -476,13 +476,20 @@ static void draw_scene(SDL_Renderer *r, int w, int h)
     }
     flush(r);
     /* the fraa: admiring them in spring and summer, and picking in autumn */
-    if (p > P_BUD + 0.02 && p < P_PICK - 0.01) pic(SP_F_STAND, w * 0.4, h * 0.93, h * 0.3, 0.5, 1);
+    if (p > P_BUD + 0.02 && p < P_PICK - 0.01) pic(SP_F_STAND, w * 0.4, h * 0.95, h * 0.25, 0.5, 1);
     else if (p >= P_PICK - 0.01 && p < P_PICKED + 0.01) {
         double f = ramp(p, P_PICK, P_PICKED) * NTREE;
         int t = (int)f; if (t >= NTREE) t = NTREE - 1;
-        double part = f - t, x = TX[t] * w + h * 0.1, bob = fabs(sin(anim_t * 3)) * unit * 0.3;
-        if (part > 0.82 && t < NTREE - 1) { x += (TX[t + 1] * w - TX[t] * w) * ease((part - 0.82) / 0.18); pic(SP_F_CARRY, x, h * 0.95 - bob, h * 0.3, 0.5, 1); }
-        else pic(SP_F_REACH, x, h * 0.95 - (sin(anim_t * 2.2) > 0.6 ? unit * 0.6 : 0), h * 0.3, 0.5, 1);
+        double part = f - t, x = TX[t] * w - h * 0.09, bob = fabs(sin(anim_t * 3)) * unit * 0.3, tall = h * 0.25;
+        if (part > 0.82 && t < NTREE - 1) {
+            x += (TX[t + 1] * w - TX[t] * w) * ease((part - 0.82) / 0.18);
+            double cw = tall * sprite[SP_F_CARRY].w / sprite[SP_F_CARRY].h, top = h * 0.96 - bob - tall;
+            pic(SP_F_CARRY, x, h * 0.96 - bob, tall, 0.5, 1);
+            flush(r);
+            /* his basket, heaped with the leaves of these trees */
+            static const double HEAP[6][3] = {{0.6, 0.3, -70}, {0.86, 0.3, 60}, {0.72, 0.27, -20}, {0.66, 0.33, 100}, {0.82, 0.34, -110}, {0.74, 0.31, 30}};
+            for (int k = 0; k < 6; k++) hang(SP_LEAF_Y, x - cw / 2 + HEAP[k][0] * cw, top + HEAP[k][1] * tall, tall * 0.2, HEAP[k][2], 1);
+        } else pic(SP_F_REACH, x, h * 0.96 - (sin(anim_t * 2.2) > 0.6 ? unit * 0.6 : 0), tall, 0.5, 1);
     }
     flush(r);
     if (winter > 0) for (int i = 0; i < NFLAKE; i++) /* snow */
@@ -495,6 +502,7 @@ static void draw_scene(SDL_Renderer *r, int w, int h)
     if (p >= P_FULL) { l1 = "SUMMER"; l2 = "THE BEST LEAVES GROW ON THE MIDDLE BRANCHES, NOT FAR FROM THE TRUNK"; }
     if (p >= P_TURN) { l1 = "THE LEAVES TURN"; l2 = "A WARM WET SUMMER MAKES MORE GOOD ONES; A COLD DRY ONE, FEWER"; }
     if (p >= P_PICK) { l1 = "IN THE AUTUMN THEY ARE PICKED BY HAND"; l2 = "AND STRUNG ON LINES TO DRY FOR SEVERAL WEEKS"; }
+    if (p >= P_PICKED + 0.01) { l1 = "THE LEAVES DRY ON THE LINES"; l2 = "FOR SEVERAL WEEKS, AS THE YEAR COOLS"; }
     if (p >= P_DRY) { l1 = "THEN THEY ARE TAKEN INDOORS"; l2 = "AND STACKED UNDER STONES TO PRESS THEM FLAT"; }
     if (p >= P_IN + 0.015) { l1 = "THERE THEY STAY"; l2 = "FOR A HUNDRED YEARS"; }
     if (p >= P_CUT) { l1 = "CUT SQUARE IN A FRAME"; l2 = "ABOUT ONE LEAF IN TEN IS GOOD ENOUGH TO MAKE A PAGE"; }

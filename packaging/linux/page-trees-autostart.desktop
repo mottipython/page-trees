@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=The Page Trees screensaver
+Comment=Start the Page Trees when the session has been idle
+Exec=page-trees-screensaver watch
+Icon=page-trees
+NoDisplay=true
+X-GNOME-Autostart-enabled=true

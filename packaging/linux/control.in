@@ -1,0 +1,18 @@
+Package: page-trees
+Version: @VERSION@
+Section: games
+Priority: optional
+Architecture: @ARCH@
+Depends: libc6 (>= 2.38), libsdl2-2.0-0 (>= 2.0.18), swayidle
+Installed-Size: @SIZE@
+Maintainer: Motti Schleider <motti.schleider@gmail.com>
+Description: The page trees, a screensaver from "Anathem"
+ The page trees from Neal Stephenson's novel Anathem: a grove inside the concent
+ through one year. The leaves bud, broaden and turn, are picked by hand in
+ autumn and strung on lines to dry, then pressed under stones for a hundred
+ years and cut square in a frame to make pages.
+ .
+ It begins at the season it really is.
+ .
+ On Wayland desktops it starts by itself after five minutes idle.
+ page-trees-screensaver changes the delay or turns it off.
