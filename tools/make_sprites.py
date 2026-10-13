@@ -79,9 +79,16 @@ def main():
         got = [trim(p) for p in pieces(key(load(f"{SRC}/fraa.jpeg")), 2)]
         if len(got) != 4:
             raise SystemExit(f"fraa: found {len(got)} drawings, expected 4")
-        f = 480 / max(p.shape[0] for p in got)
+        if os.path.exists(f"{SRC}/carry.jpeg"):  # him with his basket, drawn again on its own
+            tall = got[1].shape[0]
+            got[1] = trim(key(load(f"{SRC}/carry.jpeg")))
+            f1 = tall / got[1].shape[0]
+        else:
+            f1 = 1
+        f = 480 / max(p.shape[0] for i, p in enumerate(got) if i != 1)
         for name, p in zip(["f_reach", "f_carry", "f_write", "f_stand"], got):
-            save(p, max(1, round(p.shape[1] * f)), max(1, round(p.shape[0] * f)), f"{OUT}/{name}.png")
+            k = f * (f1 if name == "f_carry" else 1)
+            save(p, max(1, round(p.shape[1] * k)), max(1, round(p.shape[0] * k)), f"{OUT}/{name}.png")
         print("fraa")
     subprocess.run(["magick", f"{SRC}/grove.jpeg", "-resize", "1920x1080!", "-quality", "90", f"{OUT}/bg.jpg"], check=True)
     print("grove")

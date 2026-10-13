@@ -483,12 +483,7 @@ static void draw_scene(SDL_Renderer *r, int w, int h)
         double part = f - t, x = TX[t] * w - h * 0.09, bob = fabs(sin(anim_t * 3)) * unit * 0.3, tall = h * 0.25;
         if (part > 0.82 && t < NTREE - 1) {
             x += (TX[t + 1] * w - TX[t] * w) * ease((part - 0.82) / 0.18);
-            double cw = tall * sprite[SP_F_CARRY].w / sprite[SP_F_CARRY].h, top = h * 0.96 - bob - tall;
             pic(SP_F_CARRY, x, h * 0.96 - bob, tall, 0.5, 1);
-            flush(r);
-            /* his basket, heaped with the leaves of these trees */
-            static const double HEAP[6][3] = {{0.6, 0.3, -70}, {0.86, 0.3, 60}, {0.72, 0.27, -20}, {0.66, 0.33, 100}, {0.82, 0.34, -110}, {0.74, 0.31, 30}};
-            for (int k = 0; k < 6; k++) hang(SP_LEAF_Y, x - cw / 2 + HEAP[k][0] * cw, top + HEAP[k][1] * tall, tall * 0.2, HEAP[k][2], 1);
         } else pic(SP_F_REACH, x, h * 0.96 - (sin(anim_t * 2.2) > 0.6 ? unit * 0.6 : 0), tall, 0.5, 1);
     }
     flush(r);
